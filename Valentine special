@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Will you be my Valentine?</title>
+
+  <!-- Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+
+  <style>
+    :root{
+      --bg1:#fff0f5;
+      --bg2:#fff6fb;
+      --card:#ffffffdd;
+      --accent:#ff3b7a;
+      --accent-2:#ff1f68;
+      --muted:#6b7280;
+      --shadow: 0 18px 60px rgba(0,0,0,.12);
+      --radius:20px;
+      --glass: blur(8px);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      min-height:100svh;
+      display:grid;
+      place-items:center;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(circle at 10% 10%, var(--bg2), var(--bg1));
+      padding:18px;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      overflow:hidden;
+    }
+
+    /* Fullscreen confetti canvas */
+    #confettiCanvas{
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100vh;
+      pointer-events:none;
+      z-index:9999;
+    }
+
+    /* Floating hearts */
+    .hearts {
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+    }
+    .heart{
+      position:absolute;
+      width:14px;
+      height:14px;
+      transform:rotate(-45deg) scale(1);
+      opacity:.9;
+      background:linear-gradient(45deg,var(--accent),var(--accent-2));
+      border-radius:3px 3px 0 0;
+      filter:drop-shadow(0 6px 12px rgba(255,60,122,.12));
+      animation:floatUp linear infinite;
+    }
+    @keyframes floatUp {
+      from { transform: translateY(120vh) rotate(-20deg) scale(.8); opacity:0; }
+      10%   { opacity: .9; }
+      to   { transform: translateY(-40vh) rotate(20deg) scale(1.1); opacity:0; }
+    }
+
+    main.card{
+      position:relative;
+      width:min(760px,96vw);
+      max-width:960px;
+      padding:28px;
+      border-radius:var(--radius);
+      background:var(--card);
+      backdrop-filter:var(--glass);
+      box-shadow:var(--shadow);
+      z-index:2;
+      text-align:center;
+      overflow:visible;
+    }
+
+    header h1{
+      margin:12px 0 6px;
+      font-size:clamp(22px,4vw,42px);
+      line-height:1.05;
+    }
+    header p.lead{
+      margin:6px 0 18px;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .art{
+      width:min(320px,60vw);
+      margin:0 auto 8px;
+      display:block;
+      filter:drop-shadow(0 8px 18px rgba(0,0,0,.09));
+    }
+
+    .button-zone{
+      position:relative;
+      width:min(560px,92%);
+      height:150px;
+      margin:10px auto 0;
+      touch-action:none;
+    }
+
+    .controls{
+      position:absolute;
+      inset:0;
+    }
+
+    button{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      padding:14px 26px;
+      font-size:18px;
+      font-weight:800;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(0,0,0,.12);
+      user-select:none;
+      -webkit-tap-highlight-color:transparent;
+      transition:transform .12s ease, background .12s ease, box-shadow .12s ease;
+      will-change:transform,left,top;
+    }
+
+    #yesBtn{
+      left:16%;
+      background:linear-gradient(180deg,var(--accent),var(--accent-2));
+      color:white;
+    }
+    #yesBtn:hover, #yesBtn:focus{ transform: translateY(-50%) scale(1.04); outline: none; box-shadow:0 14px 30px rgba(255,60,122,.18); }
+
+    #noBtn{
+      left:62%;
+      background:#eef2f7;
+      color:#111827;
+    }
+    #noBtn:hover, #noBtn:focus{ transform: translateY(-50%) scale(1.02); outline: none; }
+
+    .hint{
+      margin-top:12px;
+      font-size:13px;
+      color:var(--muted);
+      opacity:.9;
+    }
+
+    .result{
+      display:none;
+      margin-top:18px;
+      animation:pop .36s ease;
+    }
+    .result h2{
+      font-size:clamp(26px,4.5vw,46px);
+      margin:8px 0;
+    }
+    .fireworks{
+      width:min(420px,84vw);
+      margin:4px auto 0;
+      display:block;
+    }
+    @keyframes pop { from { transform: scale(.96); opacity:0 } to { transform: scale(1); opacity:1 } }
+
+    footer{
+      margin-top:14px;
+      font-size:13px;
+      color:var(--muted);
+      display:flex;
+      justify-content:center;
+      gap:12px;
+      align-items:center;
+    }
+
+    /* responsive tweaks */
+    @media (max-width:520px){
+      .button-zone{ height:120px }
+      button{ padding:12px 18px; font-size:16px }
+      #yesBtn{ left:12% }
+      #noBtn{ left:56% }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+  <div class="hearts" aria-hidden="true"></div>
+
+  <main class="card" role="main" aria-labelledby="title">
+    <svg class="art" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="fur" x1="0" x2="1">
+          <stop offset="0" stop-color="#f7c7a1"/>
+          <stop offset="1" stop-color="#f2a97b"/>
+        </linearGradient>
+        <linearGradient id="heart" x1="0" x2="1">
+          <stop offset="0" stop-color="#ff4d7d"/>
+          <stop offset="1" stop-color="#ff1f68"/>
+        </linearGradient>
+      </defs>
+      <path d="M250 50 C250 33 270 25 282 38C294 25 314 33 314 50C314 78 282 92 282 106C282 92 250 78 250 50Z" fill="url(#heart)"/>
+      <path d="M90 120 C90 70 140 40 190 60C240 40 290 70 290 120C290 180 240 210 190 210C140 210 90 180 90 120Z" fill="url(#fur)"/>
+      <path d="M110 92 L95 55 L140 78 Z" fill="#f2a97b"/>
+      <path d="M270 92 L285 55 L240 78 Z" fill="#f2a97b"/>
+      <circle cx="160" cy="130" r="8"/>
+      <circle cx="220" cy="130" r="8"/>
+      <path d="M190 144 C186 144 182 148 182 152C182 160 190 164 190 170C190 164 198 160 198 152C198 148 194 144 190 144Z" fill="#ff7aa2"/>
+    </svg>
+
+    <header>
+      <h1 id="title">Will you be my Valentine?</h1>
+      <p class="lead" id="subtitle">A little surprise for someone special</p>
+    </header>
+
+    <section class="button-zone" id="zone" aria-label="Answer area">
+      <div class="controls" id="controls" role="group" aria-label="Answer buttons">
+        <button id="yesBtn" aria-label="Yes, I'll be your Valentine">Yes</button>
+        <button id="noBtn" aria-label="No">No</button>
+      </div>
+    </section>
+
+    <div class="hint" id="hint">Hint: "Thekua x Misti Dahi"</div>
+
+    <section class="result" id="result" aria-live="polite">
+      <h2 id="resultTitle">Khush Raho 🙏</h2>
+      <img class="fireworks" src="https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif" alt="Fireworks" />
+      <p style="color:var(--muted);margin-top:8px">Sending confetti and good wishes 💌</p>
+    </section>
+
+    <footer>
+      <div id="recipientNote" style="font-weight:600"></div>
+    </footer>
+  </main>
+
+  <script>
+    // ---------- Config & elements ----------
+    const zone = document.getElementById('zone');
+    const controls = document.getElementById('controls');
+    const yesBtn = document.getElementById('yesBtn');
+    const noBtn = document.getElementById('noBtn');
+    const result = document.getElementById('result');
+    const hint = document.getElementById('hint');
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const heartsLayer = document.querySelector('.hearts');
+    const recipientNote = document.getElementById('recipientNote');
+
+    // Get name from URL ?name=...
+    const params = new URLSearchParams(location.search);
+    const name = (params.get('name') || 'Divya Jyoti').trim();
+    recipientNote.textContent = name + ' — You are loved ❤️';
+
+    // ---------- Confetti setup ----------
+    function resizeConfettiCanvas(){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      confettiCanvas.style.width = '100vw';
+      confettiCanvas.style.height = '100vh';
+    }
+    window.addEventListener('resize', resizeConfettiCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(resizeConfettiCanvas, 150));
+    resizeConfettiCanvas();
+
+    const confettiInstance = confetti.create(confettiCanvas, { resize: false, useWorker: true });
+
+    function burstConfetti(){
+      const end = Date.now() + 1400;
+      (function frame() {
+        confettiInstance({
+          particleCount: 12,
+          spread: 95,
+          startVelocity: 45,
+          ticks: 160,
+          origin: { x: Math.random(), y: Math.random() * 0.35 }
+        });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+      setTimeout(() => {
+        confettiInstance({
+          particleCount: 300,
+          spread: 140,
+          startVelocity: 60,
+          ticks: 220,
+          origin: { x: 0.5, y: 0.55 }
+        });
+      }, 300);
+    }
+
+    // ---------- Floating hearts visual ----------
+    function spawnHearts(count = 12){
+      const w = window.innerWidth, h = window.innerHeight;
+      for (let i=0;i<count;i++){
+        const el = document.createElement('div');
+        el.className = 'heart';
+        // create heart shape with pseudo after/before via clip-path transform trick
+        el.style.left = (Math.random()*100) + 'vw';
+        el.style.animationDuration = (8 + Math.random()*10) + 's';
+        el.style.opacity = (0.6 + Math.random()*0.4);
+        el.style.transform = 'rotate(' + (Math.random()*60 - 30) + 'deg)';
+        heartsLayer.appendChild(el);
+        // remove after animation
+        setTimeout(()=> el.remove(), 18000);
+      }
+    }
+    // periodically spawn
+    setInterval(()=> spawnHearts(6), 2500);
+    spawnHearts(10);
+
+    // ---------- "No" button runs away behavior ----------
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    function moveNo(px, py){
+      const z = zone.getBoundingClientRect();
+      const b = noBtn.getBoundingClientRect();
+      // vector from pointer to center of button
+      let dx = (b.left + b.width/2) - px;
+      let dy = (b.top + b.height/2) - py;
+      const mag = Math.hypot(dx,dy) || 1;
+      dx /= mag; dy /= mag;
+      // push the button outwards
+      let newLeft = (b.left - z.left) + dx * 140;
+      let newTop  = (b.top - z.top) + dy * 120;
+      newLeft = clamp(newLeft, 6, z.width - b.width - 6);
+      newTop  = clamp(newTop, 6, z.height - b.height - 6);
+      noBtn.style.left = newLeft + 'px';
+      noBtn.style.top = newTop + 'px';
+      noBtn.style.transform = 'none';
+      // little encouragement: make yes grow subtly
+      yesBtn.style.transform = 'translateY(-50%) scale(1.06)';
+      setTimeout(()=> yesBtn.style.transform = 'translateY(-50%)', 220);
+    }
+
+    // Use pointermove to handle mouse/touch/pen
+    zone.addEventListener('pointermove', e => {
+      const b = noBtn.getBoundingClientRect();
+ <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Will you be my Valentine?</title>
+
+  <!-- Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+
+  <style>
+    :root{
+      --bg1:#fff0f5;
+      --bg2:#fff6fb;
+      --card:#ffffffdd;
+      --accent:#ff3b7a;
+      --accent-2:#ff1f68;
+      --muted:#6b7280;
+      --shadow: 0 18px 60px rgba(0,0,0,.12);
+      --radius:20px;
+      --glass: blur(8px);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      min-height:100svh;
+      display:grid;
+      place-items:center;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(circle at 10% 10%, var(--bg2), var(--bg1));
+      padding:18px;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      overflow:hidden;
+    }
+
+    /* Fullscreen confetti canvas */
+    #confettiCanvas{
+      position:fixed;
+      inset:0;
+      width:100vw;
+      height:100vh;
+      pointer-events:none;
+      z-index:9999;
+    }
+
+    /* Floating hearts */
+    .hearts {
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+    }
+    .heart{
+      position:absolute;
+      width:14px;
+      height:14px;
+      transform:rotate(-45deg) scale(1);
+      opacity:.9;
+      background:linear-gradient(45deg,var(--accent),var(--accent-2));
+      border-radius:3px 3px 0 0;
+      filter:drop-shadow(0 6px 12px rgba(255,60,122,.12));
+      animation:floatUp linear infinite;
+    }
+    @keyframes floatUp {
+      from { transform: translateY(120vh) rotate(-20deg) scale(.8); opacity:0; }
+      10%   { opacity: .9; }
+      to   { transform: translateY(-40vh) rotate(20deg) scale(1.1); opacity:0; }
+    }
+
+    main.card{
+      position:relative;
+      width:min(760px,96vw);
+      max-width:960px;
+      padding:28px;
+      border-radius:var(--radius);
+      background:var(--card);
+      backdrop-filter:var(--glass);
+      box-shadow:var(--shadow);
+      z-index:2;
+      text-align:center;
+      overflow:visible;
+    }
+
+    header h1{
+      margin:12px 0 6px;
+      font-size:clamp(22px,4vw,42px);
+      line-height:1.05;
+    }
+    header p.lead{
+      margin:6px 0 18px;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .art{
+      width:min(320px,60vw);
+      margin:0 auto 8px;
+      display:block;
+      filter:drop-shadow(0 8px 18px rgba(0,0,0,.09));
+    }
+
+    .button-zone{
+      position:relative;
+      width:min(560px,92%);
+      height:150px;
+      margin:10px auto 0;
+      touch-action:none;
+    }
+
+    .controls{
+      position:absolute;
+      inset:0;
+    }
+
+    button{
+      position:absolute;
+      top:50%;
+      transform:translateY(-50%);
+      padding:14px 26px;
+      font-size:18px;
+      font-weight:800;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      box-shadow:0 10px 20px rgba(0,0,0,.12);
+      user-select:none;
+      -webkit-tap-highlight-color:transparent;
+      transition:transform .12s ease, background .12s ease, box-shadow .12s ease;
+      will-change:transform,left,top;
+    }
+
+    #yesBtn{
+      left:16%;
+      background:linear-gradient(180deg,var(--accent),var(--accent-2));
+      color:white;
+    }
+    #yesBtn:hover, #yesBtn:focus{ transform: translateY(-50%) scale(1.04); outline: none; box-shadow:0 14px 30px rgba(255,60,122,.18); }
+
+    #noBtn{
+      left:62%;
+      background:#eef2f7;
+      color:#111827;
+    }
+    #noBtn:hover, #noBtn:focus{ transform: translateY(-50%) scale(1.02); outline: none; }
+
+    .hint{
+      margin-top:12px;
+      font-size:13px;
+      color:var(--muted);
+      opacity:.9;
+    }
+
+    .result{
+      display:none;
+      margin-top:18px;
+      animation:pop .36s ease;
+    }
+    .result h2{
+      font-size:clamp(26px,4.5vw,46px);
+      margin:8px 0;
+    }
+    .fireworks{
+      width:min(420px,84vw);
+      margin:4px auto 0;
+      display:block;
+    }
+    @keyframes pop { from { transform: scale(.96); opacity:0 } to { transform: scale(1); opacity:1 } }
+
+    footer{
+      margin-top:14px;
+      font-size:13px;
+      color:var(--muted);
+      display:flex;
+      justify-content:center;
+      gap:12px;
+      align-items:center;
+    }
+
+    /* responsive tweaks */
+    @media (max-width:520px){
+      .button-zone{ height:120px }
+      button{ padding:12px 18px; font-size:16px }
+      #yesBtn{ left:12% }
+      #noBtn{ left:56% }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+  <div class="hearts" aria-hidden="true"></div>
+
+  <main class="card" role="main" aria-labelledby="title">
+    <svg class="art" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="fur" x1="0" x2="1">
+          <stop offset="0" stop-color="#f7c7a1"/>
+          <stop offset="1" stop-color="#f2a97b"/>
+        </linearGradient>
+        <linearGradient id="heart" x1="0" x2="1">
+          <stop offset="0" stop-color="#ff4d7d"/>
+          <stop offset="1" stop-color="#ff1f68"/>
+        </linearGradient>
+      </defs>
+      <path d="M250 50 C250 33 270 25 282 38C294 25 314 33 314 50C314 78 282 92 282 106C282 92 250 78 250 50Z" fill="url(#heart)"/>
+      <path d="M90 120 C90 70 140 40 190 60C240 40 290 70 290 120C290 180 240 210 190 210C140 210 90 180 90 120Z" fill="url(#fur)"/>
+      <path d="M110 92 L95 55 L140 78 Z" fill="#f2a97b"/>
+      <path d="M270 92 L285 55 L240 78 Z" fill="#f2a97b"/>
+      <circle cx="160" cy="130" r="8"/>
+      <circle cx="220" cy="130" r="8"/>
+      <path d="M190 144 C186 144 182 148 182 152C182 160 190 164 190 170C190 164 198 160 198 152C198 148 194 144 190 144Z" fill="#ff7aa2"/>
+    </svg>
+
+    <header>
+      <h1 id="title">Will you be my Valentine?</h1>
+      <p class="lead" id="subtitle">A little surprise for someone special</p>
+    </header>
+
+    <section class="button-zone" id="zone" aria-label="Answer area">
+      <div class="controls" id="controls" role="group" aria-label="Answer buttons">
+        <button id="yesBtn" aria-label="Yes, I'll be your Valentine">Yes</button>
+        <button id="noBtn" aria-label="No">No</button>
+      </div>
+    </section>
+
+    <div class="hint" id="hint">Hint: "Thekua x Misti Dahi"</div>
+
+    <section class="result" id="result" aria-live="polite">
+      <h2 id="resultTitle">Khush Raho 🙏</h2>
+      <img class="fireworks" src="https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif" alt="Fireworks" />
+      <p style="color:var(--muted);margin-top:8px">Sending confetti and good wishes 💌</p>
+    </section>
+
+    <footer>
+      <div id="recipientNote" style="font-weight:600"></div>
+    </footer>
+  </main>
+
+  <script>
+    // ---------- Config & elements ----------
+    const zone = document.getElementById('zone');
+    const controls = document.getElementById('controls');
+    const yesBtn = document.getElementById('yesBtn');
+    const noBtn = document.getElementById('noBtn');
+    const result = document.getElementById('result');
+    const hint = document.getElementById('hint');
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const heartsLayer = document.querySelector('.hearts');
+    const recipientNote = document.getElementById('recipientNote');
+
+    // Get name from URL ?name=...
+    const params = new URLSearchParams(location.search);
+    const name = (params.get('name') || 'Divya Jyoti').trim();
+    recipientNote.textContent = name + ' — You are loved ❤️';
+
+    // ---------- Confetti setup ----------
+    function resizeConfettiCanvas(){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      confettiCanvas.style.width = '100vw';
+      confettiCanvas.style.height = '100vh';
+    }
+    window.addEventListener('resize', resizeConfettiCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(resizeConfettiCanvas, 150));
+    resizeConfettiCanvas();
+
+    const confettiInstance = confetti.create(confettiCanvas, { resize: false, useWorker: true });
+
+    function burstConfetti(){
+      const end = Date.now() + 1400;
+      (function frame() {
+        confettiInstance({
+          particleCount: 12,
+          spread: 95,
+          startVelocity: 45,
+          ticks: 160,
+          origin: { x: Math.random(), y: Math.random() * 0.35 }
+        });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+      setTimeout(() => {
+        confettiInstance({
+          particleCount: 300,
+          spread: 140,
+          startVelocity: 60,
+          ticks: 220,
+          origin: { x: 0.5, y: 0.55 }
+        });
+      }, 300);
+    }
+
+    // ---------- Floating hearts visual ----------
+    function spawnHearts(count = 12){
+      const w = window.innerWidth, h = window.innerHeight;
+      for (let i=0;i<count;i++){
+        const el = document.createElement('div');
+        el.className = 'heart';
+        // create heart shape with pseudo after/before via clip-path transform trick
+        el.style.left = (Math.random()*100) + 'vw';
+        el.style.animationDuration = (8 + Math.random()*10) + 's';
+        el.style.opacity = (0.6 + Math.random()*0.4);
+        el.style.transform = 'rotate(' + (Math.random()*60 - 30) + 'deg)';
+        heartsLayer.appendChild(el);
+        // remove after animation
+        setTimeout(()=> el.remove(), 18000);
+      }
+    }
+    // periodically spawn
+    setInterval(()=> spawnHearts(6), 2500);
+    spawnHearts(10);
+
+    // ---------- "No" button runs away behavior ----------
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    function moveNo(px, py){
+      const z = zone.getBoundingClientRect();
+      const b = noBtn.getBoundingClientRect();
+      // vector from pointer to center of button
+      let dx = (b.left + b.width/2) - px;
+      let dy = (b.top + b.height/2) - py;
+      const mag = Math.hypot(dx,dy) || 1;
+      dx /= mag; dy /= mag;
+      // push the button outwards
+      let newLeft = (b.left - z.left) + dx * 140;
+      let newTop  = (b.top - z.top) + dy * 120;
+      newLeft = clamp(newLeft, 6, z.width - b.width - 6);
+      newTop  = clamp(newTop, 6, z.height - b.height - 6);
+      noBtn.style.left = newLeft + 'px';
+      noBtn.style.top = newTop + 'px';
+      noBtn.style.transform = 'none';
+      // little encouragement: make yes grow subtly
+      yesBtn.style.transform = 'translateY(-50%) scale(1.06)';
+      setTimeout(()=> yesBtn.style.transform = 'translateY(-50%)', 220);
+    }
+
+    // Use pointermove to handle mouse/touch/pen
+    zone.addEventListener('pointermove', e => {
+      const b = noBtn.getBoundingClientRect();
+      const d = Math.hypot((b.left + b.width/2) - e.clientX, (b.top + b.height/2) - e.clientY);
+      if (d < 150) moveNo(e.clientX, e.clientY);
+    });
+
+    // also move away on focus (keyboard navigation)
+    noBtn.addEventListener('focus', () => {
+      const rect = noBtn.getBoundingClientRect();
+      // simulate pointer from center of controls toward center of card
+      moveNo(rect.left + rect.width/2 - 80, rect.top + rect.height/2);
+    });
+
+    // prevent clicking No
+    noBtn.addEventListener('click', e => {
+      e.preventDefault();
+      // playful message if they somehow click
+      hint.textContent = "Try saying 'Yes' — it's okay 😊";
+      hint.style.opacity = 1;
+      setTimeout(()=> hint.textContent = 'Hint: "Thekua x Misti Dahi"', 1600);
+    });
+
+    // ---------- Yes behavior ----------
+    yesBtn.addEventListener('click', async () => {
+      controls.style.display = 'none';
+      hint.style.display = 'none';
+      result.style.display = 'block';
+      // update result message with recipient name
+      const rTitle = document.getElementById('resultTitle');
+      rTitle.textContent = `Khush Raho, ${name} 🙏`;
+      resizeConfettiCanvas();
+      burstConfetti();
+      // quick sparkle hearts
+      spawnHearts(26);
+    });
+
+    // keyboard: Enter triggers yes if focused anywhere inside card
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && document.activeElement !== null){
+        // if focus is inside the card but not an input, trigger yes
+        if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'){
+          // avoid intercepting standard button behavior
+          if (document.activeElement === noBtn){
+            // move it away
+            noBtn.blur();
+            noBtn.dispatchEvent(new FocusEvent('focus'));
+          } else {
+            yesBtn.click();
+          }
+        }
+      }
+    });
+
+    // small accessibility: ensure buttons are reachable by keyboard with sensible positions
+    function centerControls(){
+      // If layout changes, reposition absolutely positioned buttons relative to zone
+      const z = zone.getBoundingClientRect();
+      const bYes = yesBtn.getBoundingClientRect();
+      const bNo = noBtn.getBoundingClientRect();
+      // apply left as percentage fallback if not set
+      if (!yesBtn.style.left) yesBtn.style.left = (z.width*0.18) + 'px';
+      if (!noBtn.style.left) noBtn.style.left = (z.width*0.62) + 'px';
+      // ensure top coordinate is centered
+      yesBtn.style.top = (z.height/2 - bYes.height/2) + 'px';
+      noBtn.style.top = (z.height/2 - bNo.height/2) + 'px';
+    }
+    // run on load and resize
+    window.addEventListener('load', centerControls);
+    window.addEventListener('resize', centerControls);
+
+    // keep canvas sized on first confetti
+    function initialConfettiWarmup(){
+      // small warm burst in background so worker initializes quickly (muted, few particles)
+      confettiInstance({ particleCount: 6, spread: 40, startVelocity: 10, origin: { x: 0.5, y: 0.5 } });
+    }
+    setTimeout(initialConfettiWarmup, 600);
+
+    // Make the recipient more prominent in heading if name param set
+    if (name && name !== 'Divya Jyoti'){
+      const title = document.getElementById('title');
+      title.textContent = `${name}, will you be my Valentine?`;
+      const subtitle = document.getElementById('subtitle');
+      subtitle.textContent = 'A little surprise, just for you';
+    }
+  </script>
+</body>
+</html>     const d = Math.hypot((b.left + b.width/2) - e.clientX, (b.top + b.height/2) - e.clientY);
+      if (d < 150) moveNo(e.clientX, e.clientY);
+    });
+
+    // also move away on focus (keyboard navigation)
+    noBtn.addEventListener('focus', () => {
+      const rect = noBtn.getBoundingClientRect();
+      // simulate pointer from center of controls toward center of card
+      moveNo(rect.left + rect.width/2 - 80, rect.top + rect.height/2);
+    });
+
+    // prevent clicking No
+    noBtn.addEventListener('click', e => {
+      e.preventDefault();
+      // playful message if they somehow click
+      hint.textContent = "Try saying 'Yes' — it's okay 😊";
+      hint.style.opacity = 1;
+      setTimeout(()=> hint.textContent = 'Hint: "Thekua x Misti Dahi"', 1600);
+    });
+
+    // ---------- Yes behavior ----------
+    yesBtn.addEventListener('click', async () => {
+      controls.style.display = 'none';
+      hint.style.display = 'none';
+      result.style.display = 'block';
+      // update result message with recipient name
+      const rTitle = document.getElementById('resultTitle');
+      rTitle.textContent = `Khush Raho, ${name} 🙏`;
+      resizeConfettiCanvas();
+      burstConfetti();
+      // quick sparkle hearts
+      spawnHearts(26);
+    });
+
+    // keyboard: Enter triggers yes if focused anywhere inside card
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && document.activeElement !== null){
+        // if focus is inside the card but not an input, trigger yes
+        if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA'){
+          // avoid intercepting standard button behavior
+          if (document.activeElement === noBtn){
+            // move it away
+
